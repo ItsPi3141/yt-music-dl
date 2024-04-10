@@ -1,0 +1,19 @@
+{
+	"name": "youtube-music-dl",
+	"version": "1.0.0",
+	"description": "",
+	"type": "module",
+	"module": "index.js",
+	"scripts": {
+		"test": "node test.ts"
+	},
+	"keywords": [
+		"youtube",
+		"youtube-music",
+		"youtube-music-dl",
+		"ytdl",
+		"yt-dl"
+	],
+	"author": "Pi",
+	"license": "GPL-3.0"
+}
