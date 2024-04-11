@@ -18,3 +18,10 @@ import ytMusicDl from "youtube-music-dl";
     // do stuff with the returned ArrayBuffer
 })();
 ```
+
+## Credits
+
+Huge thanks to
+
+- <https://github.com/fent/node-ytdl-core>
+- <https://github.com/egoroof/browser-id3-writer>
