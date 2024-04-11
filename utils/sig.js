@@ -31,5 +31,5 @@ export const decipherScript = (sig) => {
 };
 
 export const nTransformScript = (ncode) => {
-	return "enhanced_except_7ZoBkuX-_w8_" + ncode;
+	return `enhanced_except_7ZoBkuX-_w8_${ncode}`;
 };
