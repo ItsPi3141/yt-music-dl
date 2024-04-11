@@ -92,8 +92,6 @@ const ytMusicDl = async (id, options) => {
 
 	const downloadUrl = downloadInfo.url;
 
-	console.log(`${downloadUrl}`);
-
 	const chuckSize = 1024 * 256;
 	const prepareChunks = [];
 	for (
