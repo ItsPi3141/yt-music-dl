@@ -13,10 +13,12 @@ npm install youtube-music-dl
 ```js
 import ytMusicDl from "youtube-music-dl";
 
-(async () => {
-    const data = await ytMusicDl("videoIdHere");
-    // do stuff with the returned ArrayBuffer
-})();
+ytMusicDl("dQw4w9WgXcQ", { saveMetadata: true, showLogs: true }).then(
+    (data) => {
+        const buffer = Buffer.from(data);
+        fs.writeFileSync("test.mp3", buffer);
+    }
+);
 ```
 
 ## Credits
