@@ -1,4 +1,4 @@
-// from youtube build 45986ce4
+// from youtube music build d0ea0c5b
 
 export const decipherScript = (sig) => {
 	const transformations = {
@@ -16,15 +16,14 @@ export const decipherScript = (sig) => {
 	};
 	const transform = (text) => {
 		const a = text.split("");
-		transformations.reverseArray(a, 12);
-		transformations.spliceArray(a, 3);
-		transformations.swapElementAtPos(a, 13);
-		transformations.reverseArray(a, 40);
-		transformations.spliceArray(a, 2);
-		transformations.swapElementAtPos(a, 13);
+		transformations.reverseArray(a, 67);
 		transformations.spliceArray(a, 1);
-		transformations.swapElementAtPos(a, 55);
-		transformations.spliceArray(a, 1);
+		transformations.swapElementAtPos(a, 21);
+		transformations.reverseArray(a, 57);
+		transformations.swapElementAtPos(a, 13);
+		transformations.swapElementAtPos(a, 18);
+		transformations.reverseArray(a, 65);
+		transformations.swapElementAtPos(a, 19);
 		return a.join("");
 	};
 	return transform(sig);
