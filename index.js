@@ -1,31 +1,34 @@
+import ID3 from "./utils/id3.js";
 import { decipherScript, nTransformScript } from "./utils/sig.js";
 import { parseQueryString } from "./utils/utils.js";
 
+// const SOURCE_API_URL =
+// 	"https://www.youtube-nocookie.com/youtubei/v1/player?prettyPrint=false";
 const SOURCE_API_URL =
-	"https://www.youtube-nocookie.com/youtubei/v1/player?prettyPrint=false";
+	"https://music.youtube.com/youtubei/v1/player?prettyPrint=false";
 
-const createFetchBody = (videoId) => {
+const createFetchBody = (musicId) => {
 	return JSON.stringify({
-		videoId: videoId,
+		videoId: musicId,
 		context: {
 			client: {
-				clientName: "WEB_EMBEDDED_PLAYER",
+				clientName: "WEB",
 				clientVersion: "2.20210622.10.00",
 			},
 			thirdParty: {
-				embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
+				embedUrl: `https://music.youtube.com/watch?v=${musicId}`,
 			},
 		},
 		playbackContext: {
 			contentPlaybackContext: {
-				signatureTimestamp: 19821, // from youtube build 45986ce4
+				signatureTimestamp: 19822, // from youtube music build d0ea0c5b
 			},
 		},
 	});
 };
 
 /**
- * Returns an ArrayBuffer of the audio from a given YouTube video ID
+ * Returns an ArrayBuffer of the audio from a given YouTube music ID
  *
  * @typedef {Object} DownloadOptions
  * @property {boolean} saveMetadata - whether to save metadata
@@ -39,7 +42,7 @@ const ytMusicDl = async (id, options) => {
 	// high quality audio doesn't exist?
 	const targetItag = 140;
 
-	const videoInfo = await fetch(SOURCE_API_URL, {
+	const musicInfo = await fetch(SOURCE_API_URL, {
 		method: "POST",
 		credentials: "omit",
 		body: createFetchBody(id),
@@ -47,22 +50,21 @@ const ytMusicDl = async (id, options) => {
 
 	if (
 		!(
-			videoInfo.playabilityStatus &&
-			videoInfo.playabilityStatus.status === "OK"
+			musicInfo.playabilityStatus &&
+			musicInfo.playabilityStatus.status === "OK"
 		)
 	)
-		throw new Error("Video unplayable");
-
-	const downloadInfo = videoInfo?.streamingData?.adaptiveFormats?.find(
+		throw new Error("music unplayable");
+	const downloadInfo = musicInfo?.streamingData?.adaptiveFormats?.find(
 		(f) => f.itag === targetItag
 	);
 
-	let videoProtected = false;
+	let musicProtected = false;
 	if (!downloadInfo?.url) {
-		videoProtected = true;
+		musicProtected = true;
 	}
 
-	if (videoProtected) {
+	if (musicProtected) {
 		const decipher = (url) => {
 			const args = parseQueryString(url);
 			if (!args.s || !decipherScript) return args.url;
@@ -114,7 +116,36 @@ const ytMusicDl = async (id, options) => {
 	for (const i in downloadedChunks) {
 		chunks.push(await downloadedChunks[i]);
 	}
-	return await new Blob(chunks).arrayBuffer();
+
+	const song = await new Blob(chunks).arrayBuffer();
+	if (options.saveMetadata) {
+		const thumbnailUrl =
+			musicInfo?.videoDetails?.thumbnail?.thumbnails?.[
+				musicInfo?.videoDetails?.thumbnail?.thumbnails.length - 1
+			]?.url;
+		const metadata = new ID3(song);
+		metadata
+			.setFrame("TPE1", [
+				musicInfo?.videoDetails?.author.replace(/ ? -? ?Topic/g, ""),
+			])
+			.setFrame("TIT2", musicInfo?.videoDetails?.title)
+			.setFrame(
+				"TYER",
+				Number.parseInt(
+					musicInfo?.microformat?.playerMicroformatRenderer?.publishDate.split(
+						"-"
+					)[0]
+				)
+			)
+			.setFrame("APIC", {
+				type: 3,
+				data: await (await fetch(thumbnailUrl)).arrayBuffer(),
+				description: musicInfo?.videoDetails?.title,
+			});
+		metadata.addTag();
+		return metadata.arrayBuffer;
+	}
+	return song;
 };
 
 export default ytMusicDl;
