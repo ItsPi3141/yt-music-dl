@@ -15,5 +15,8 @@
 		"yt-dl"
 	],
 	"author": "Pi",
-	"license": "GPL-3.0"
+	"license": "GPL-3.0",
+	"dependencies": {
+		"fluent-ffmpeg": "^2.1.2"
+	}
 }

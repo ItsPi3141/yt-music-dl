@@ -1,6 +1,7 @@
 import ID3 from "./utils/id3.js";
 import { decipherScript, nTransformScript } from "./utils/sig.js";
 import { parseQueryString } from "./utils/utils.js";
+import { m4aToMp3 } from "./utils/convert.js";
 
 // const SOURCE_API_URL =
 // 	"https://www.youtube-nocookie.com/youtubei/v1/player?prettyPrint=false";
@@ -31,7 +32,8 @@ const createFetchBody = (musicId) => {
  * Returns an ArrayBuffer of the audio from a given YouTube music ID
  *
  * @typedef {Object} DownloadOptions
- * @property {boolean} saveMetadata - whether to save metadata
+ * @property {boolean} saveMetadata - whether to save metadata or not
+ * @property {boolean} showLogs - whether to show logs or not
  *
  * @param {string} id - description of the URL parameter
  * @param {DownloadOptions} options - description of the options parameter
@@ -41,6 +43,8 @@ const ytMusicDl = async (id, options) => {
 	// itag 140 is medium quality audio
 	// high quality audio doesn't exist?
 	const targetItag = 140;
+
+	if (options.showLogs) console.log(`Getting info for song ID ${id}...`);
 
 	const musicInfo = await fetch(SOURCE_API_URL, {
 		method: "POST",
@@ -59,12 +63,15 @@ const ytMusicDl = async (id, options) => {
 		(f) => f.itag === targetItag
 	);
 
+	if (options.showLogs) console.log("Download URL found!");
+
 	let musicProtected = false;
 	if (!downloadInfo?.url) {
 		musicProtected = true;
 	}
 
 	if (musicProtected) {
+		if (options.showLogs) console.log("Deciphering download URL...");
 		const decipher = (url) => {
 			const args = parseQueryString(url);
 			if (!args.s || !decipherScript) return args.url;
@@ -94,6 +101,8 @@ const ytMusicDl = async (id, options) => {
 
 	const downloadUrl = downloadInfo.url;
 
+	if (options.showLogs) console.log("Downloading...");
+
 	const chuckSize = 1024 * 256;
 	const prepareChunks = [];
 	for (
@@ -117,8 +126,14 @@ const ytMusicDl = async (id, options) => {
 		chunks.push(await downloadedChunks[i]);
 	}
 
-	const song = await new Blob(chunks).arrayBuffer();
+	const m4aSong = await new Blob(chunks).arrayBuffer();
+
+	if (options.showLogs) console.log("Converting m4a to mp3...");
+	const song = await m4aToMp3(m4aSong);
+	if (options.showLogs) console.log("Conversion finished!");
+
 	if (options.saveMetadata) {
+		if (options.showLogs) console.log("Adding metadata...");
 		const thumbnailUrl =
 			musicInfo?.videoDetails?.thumbnail?.thumbnails?.[
 				musicInfo?.videoDetails?.thumbnail?.thumbnails.length - 1
