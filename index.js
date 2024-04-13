@@ -103,6 +103,7 @@ const ytMusicDl = async (id, options) => {
 
 	if (options.showLogs) console.log("Downloading...");
 
+	const concurrentDownloads = 16;
 	const chuckSize = 1024 * 256;
 	const prepareChunks = [];
 	for (
@@ -110,7 +111,8 @@ const ytMusicDl = async (id, options) => {
 		i < Math.ceil(Number.parseInt(downloadInfo.contentLength) / chuckSize);
 		i++
 	) {
-		prepareChunks.push(
+		if (i % concurrentDownloads === 0) prepareChunks.push([]);
+		prepareChunks[prepareChunks.length - 1].push(
 			`&range=${i * chuckSize}-${i * chuckSize + chuckSize - 1}`
 		);
 	}
