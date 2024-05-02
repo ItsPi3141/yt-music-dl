@@ -7,14 +7,8 @@ export default class ID3 {
 	 * @param {ArrayBuffer} buffer - the arraybuffer of the song you want to modify
 	 */
 	constructor(buffer) {
-		if (
-			!buffer ||
-			typeof buffer !== "object" ||
-			!("byteLength" in buffer)
-		) {
-			throw new Error(
-				"First argument should be an instance of ArrayBuffer or Buffer"
-			);
+		if (!buffer || typeof buffer !== "object" || !("byteLength" in buffer)) {
+			throw new Error("First argument should be an instance of ArrayBuffer or Buffer");
 		}
 
 		this.arrayBuffer = buffer;
@@ -33,9 +27,7 @@ export default class ID3 {
 			// song artists
 			case "TPE1": {
 				if (!Array.isArray(frameValue)) {
-					throw new Error(
-						`${frameName} frame value should be an array of strings`
-					);
+					throw new Error(`${frameName} frame value should be an array of strings`);
 				}
 				const delemiter = frameName === "TCON" ? ";" : "/";
 				const value = frameValue.join(delemiter);
@@ -56,25 +48,13 @@ export default class ID3 {
 			}
 			// song cover
 			case "APIC": {
-				if (
-					typeof frameValue !== "object" ||
-					!("type" in frameValue) ||
-					!("data" in frameValue) ||
-					!("description" in frameValue)
-				) {
-					throw new Error(
-						"APIC frame value should be an object with keys type, data and description"
-					);
+				if (typeof frameValue !== "object" || !("type" in frameValue) || !("data" in frameValue) || !("description" in frameValue)) {
+					throw new Error("APIC frame value should be an object with keys type, data and description");
 				}
 				if (frameValue.type < 0 || frameValue.type > 20) {
 					throw new Error("Incorrect APIC frame picture type");
 				}
-				this._setPictureFrame(
-					frameValue.type,
-					frameValue.data,
-					frameValue.description,
-					!!frameValue.useUnicodeEncoding
-				);
+				this._setPictureFrame(frameValue.type, frameValue.data, frameValue.description, !!frameValue.useUnicodeEncoding);
 				break;
 			}
 			default: {
@@ -92,9 +72,7 @@ export default class ID3 {
 		}
 		const bytes = new Uint8Array(this.arrayBuffer);
 		const version = bytes[3];
-		const tagSize =
-			uint7ArrayToUint28([bytes[6], bytes[7], bytes[8], bytes[9]]) +
-			headerLength;
+		const tagSize = uint7ArrayToUint28([bytes[6], bytes[7], bytes[8], bytes[9]]) + headerLength;
 
 		if (!isId3v2(bytes) || version < 2 || version > 4) {
 			return;
@@ -112,14 +90,9 @@ export default class ID3 {
 
 		const BOM = [0xff, 0xfe];
 		const headerSize = 10;
-		const totalFrameSize = this.frames.reduce(
-			(sum, frame) => sum + frame.size,
-			0
-		);
+		const totalFrameSize = this.frames.reduce((sum, frame) => sum + frame.size, 0);
 		const totalTagSize = headerSize + totalFrameSize + this.padding;
-		const buffer = new ArrayBuffer(
-			this.arrayBuffer.byteLength + totalTagSize
-		);
+		const buffer = new ArrayBuffer(this.arrayBuffer.byteLength + totalTagSize);
 		const bufferWriter = new Uint8Array(buffer);
 
 		let offset = 0;
@@ -253,12 +226,7 @@ export default class ID3 {
 			mimeType,
 			_useUnicodeEncoding,
 			description: descriptionString,
-			size: getPictureFrameSize(
-				data.byteLength,
-				mimeType.length,
-				descriptionString.length,
-				_useUnicodeEncoding
-			),
+			size: getPictureFrameSize(data.byteLength, mimeType.length, descriptionString.length, _useUnicodeEncoding),
 		});
 	}
 }
@@ -275,29 +243,17 @@ const getMimeType = (buf) => {
 	if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
 		return "image/jpeg";
 	}
-	if (
-		buf[0] === 0x89 &&
-		buf[1] === 0x50 &&
-		buf[2] === 0x4e &&
-		buf[3] === 0x47
-	) {
+	if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
 		return "image/png";
 	}
 	if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) {
 		return "image/gif";
 	}
-	if (
-		buf[8] === 0x57 &&
-		buf[9] === 0x45 &&
-		buf[10] === 0x42 &&
-		buf[11] === 0x50
-	) {
+	if (buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) {
 		return "image/webp";
 	}
-	const isLeTiff =
-		buf[0] === 0x49 && buf[1] === 0x49 && buf[2] === 0x2a && buf[3] === 0;
-	const isBeTiff =
-		buf[0] === 0x4d && buf[1] === 0x4d && buf[2] === 0 && buf[3] === 0x2a;
+	const isLeTiff = buf[0] === 0x49 && buf[1] === 0x49 && buf[2] === 0x2a && buf[3] === 0;
+	const isBeTiff = buf[0] === 0x4d && buf[1] === 0x4d && buf[2] === 0 && buf[3] === 0x2a;
 
 	if (isLeTiff || isBeTiff) {
 		return "image/tiff";
@@ -346,59 +302,29 @@ const getStringFrameSize = (frameSize) => {
 	return headerSize + encodingSize + bomSize + frameUtf16Size;
 };
 
-const getPictureFrameSize = (
-	pictureSize,
-	mimeTypeSize,
-	descriptionSize,
-	useUnicodeEncoding
-) => {
+const getPictureFrameSize = (pictureSize, mimeTypeSize, descriptionSize, useUnicodeEncoding) => {
 	const headerSize = 10;
 	const encodingSize = 1;
 	const separatorSize = 1;
 	const pictureTypeSize = 1;
 	const bomSize = 2;
-	const encodedDescriptionSize = useUnicodeEncoding
-		? bomSize + (descriptionSize + separatorSize) * 2
-		: descriptionSize + separatorSize;
+	const encodedDescriptionSize = useUnicodeEncoding ? bomSize + (descriptionSize + separatorSize) * 2 : descriptionSize + separatorSize;
 
-	return (
-		headerSize +
-		encodingSize +
-		mimeTypeSize +
-		separatorSize +
-		pictureTypeSize +
-		encodedDescriptionSize +
-		pictureSize
-	);
+	return headerSize + encodingSize + mimeTypeSize + separatorSize + pictureTypeSize + encodedDescriptionSize + pictureSize;
 };
 
 const uint32ToUint8Array = (uint32) => {
 	const eightBitMask = 0xff;
 
-	return [
-		(uint32 >>> 24) & eightBitMask,
-		(uint32 >>> 16) & eightBitMask,
-		(uint32 >>> 8) & eightBitMask,
-		uint32 & eightBitMask,
-	];
+	return [(uint32 >>> 24) & eightBitMask, (uint32 >>> 16) & eightBitMask, (uint32 >>> 8) & eightBitMask, uint32 & eightBitMask];
 };
 
 const uint28ToUint7Array = (uint28) => {
 	const sevenBitMask = 0x7f;
 
-	return [
-		(uint28 >>> 21) & sevenBitMask,
-		(uint28 >>> 14) & sevenBitMask,
-		(uint28 >>> 7) & sevenBitMask,
-		uint28 & sevenBitMask,
-	];
+	return [(uint28 >>> 21) & sevenBitMask, (uint28 >>> 14) & sevenBitMask, (uint28 >>> 7) & sevenBitMask, uint28 & sevenBitMask];
 };
 
 const uint7ArrayToUint28 = (uint7Array) => {
-	return (
-		(uint7Array[0] << 21) +
-		(uint7Array[1] << 14) +
-		(uint7Array[2] << 7) +
-		uint7Array[3]
-	);
+	return (uint7Array[0] << 21) + (uint7Array[1] << 14) + (uint7Array[2] << 7) + uint7Array[3];
 };

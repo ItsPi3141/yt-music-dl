@@ -5,8 +5,7 @@ import { m4aToMp3 } from "./utils/convert.js";
 
 // const SOURCE_API_URL =
 // 	"https://www.youtube-nocookie.com/youtubei/v1/player?prettyPrint=false";
-const SOURCE_API_URL =
-	"https://music.youtube.com/youtubei/v1/player?prettyPrint=false";
+const SOURCE_API_URL = "https://music.youtube.com/youtubei/v1/player?prettyPrint=false";
 
 const createFetchBody = (musicId) => {
 	return JSON.stringify({
@@ -52,16 +51,8 @@ const ytMusicDl = async (id, options) => {
 		body: createFetchBody(id),
 	}).then((res) => res.json());
 
-	if (
-		!(
-			musicInfo.playabilityStatus &&
-			musicInfo.playabilityStatus.status === "OK"
-		)
-	)
-		throw new Error("music unplayable");
-	const downloadInfo = musicInfo?.streamingData?.adaptiveFormats?.find(
-		(f) => f.itag === targetItag
-	);
+	if (!(musicInfo.playabilityStatus && musicInfo.playabilityStatus.status === "OK")) throw new Error("music unplayable");
+	const downloadInfo = musicInfo?.streamingData?.adaptiveFormats?.find((f) => f.itag === targetItag);
 
 	if (options.showLogs) console.log("Download URL found!");
 
@@ -76,26 +67,17 @@ const ytMusicDl = async (id, options) => {
 			const args = parseQueryString(url);
 			if (!args.s || !decipherScript) return args.url;
 			const components = new URL(decodeURIComponent(args.url));
-			components.searchParams.set(
-				args.sp ? args.sp : "signature",
-				decipherScript(decodeURIComponent(args.s))
-			);
+			components.searchParams.set(args.sp ? args.sp : "signature", decipherScript(decodeURIComponent(args.s)));
 			return components.toString();
 		};
 		const ncode = (url) => {
 			const components = new URL(decodeURIComponent(url));
 			const n = components.searchParams.get("n");
 			if (!n || !nTransformScript) return url;
-			components.searchParams.set(
-				"n",
-				nTransformScript(decodeURIComponent(n))
-			);
+			components.searchParams.set("n", nTransformScript(decodeURIComponent(n)));
 			return components.toString();
 		};
-		const url =
-			downloadInfo.url ||
-			downloadInfo.signatureCipher ||
-			downloadInfo.cipher;
+		const url = downloadInfo.url || downloadInfo.signatureCipher || downloadInfo.cipher;
 		downloadInfo.url = ncode(decipher(url));
 	}
 
@@ -106,22 +88,11 @@ const ytMusicDl = async (id, options) => {
 	const concurrentDownloads = 16;
 	const chuckSize = 1024 * 256;
 	const prepareChunks = [];
-	for (
-		let i = 0;
-		i < Math.ceil(Number.parseInt(downloadInfo.contentLength) / chuckSize);
-		i++
-	) {
+	for (let i = 0; i < Math.ceil(Number.parseInt(downloadInfo.contentLength) / chuckSize); i++) {
 		if (i % concurrentDownloads === 0) prepareChunks.push([]);
-		prepareChunks[prepareChunks.length - 1].push(
-			`&range=${i * chuckSize}-${i * chuckSize + chuckSize - 1}`
-		);
+		prepareChunks[prepareChunks.length - 1].push(`&range=${i * chuckSize}-${i * chuckSize + chuckSize - 1}`);
 	}
-	const downloadedChunks = prepareChunks.map(
-		async (chunk) =>
-			await fetch(`${downloadUrl}${chunk}`).then(
-				async (res) => await res.arrayBuffer()
-			)
-	);
+	const downloadedChunks = prepareChunks.map(async (chunk) => await fetch(`${downloadUrl}${chunk}`).then(async (res) => await res.arrayBuffer()));
 	await Promise.all(downloadedChunks);
 	const chunks = [];
 	for (const i in downloadedChunks) {
@@ -136,24 +107,12 @@ const ytMusicDl = async (id, options) => {
 
 	if (options.saveMetadata) {
 		if (options.showLogs) console.log("Adding metadata...");
-		const thumbnailUrl =
-			musicInfo?.videoDetails?.thumbnail?.thumbnails?.[
-				musicInfo?.videoDetails?.thumbnail?.thumbnails.length - 1
-			]?.url;
+		const thumbnailUrl = musicInfo?.videoDetails?.thumbnail?.thumbnails?.[musicInfo?.videoDetails?.thumbnail?.thumbnails.length - 1]?.url;
 		const metadata = new ID3(song);
 		metadata
-			.setFrame("TPE1", [
-				musicInfo?.videoDetails?.author.replace(/ ? -? ?Topic/g, ""),
-			])
+			.setFrame("TPE1", [musicInfo?.videoDetails?.author.replace(/ ? -? ?Topic/g, "")])
 			.setFrame("TIT2", musicInfo?.videoDetails?.title)
-			.setFrame(
-				"TYER",
-				Number.parseInt(
-					musicInfo?.microformat?.playerMicroformatRenderer?.publishDate.split(
-						"-"
-					)[0]
-				)
-			)
+			.setFrame("TYER", Number.parseInt(musicInfo?.microformat?.playerMicroformatRenderer?.publishDate.split("-")[0]))
 			.setFrame("APIC", {
 				type: 3,
 				data: await (await fetch(thumbnailUrl)).arrayBuffer(),
