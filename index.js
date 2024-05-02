@@ -85,18 +85,20 @@ const ytMusicDl = async (id, options) => {
 
 	if (options.showLogs) console.log("Downloading...");
 
-	const concurrentDownloads = 16;
-	const chuckSize = 1024 * 256;
+	const concurrentDownloads = 8;
+	const chuckSize = 1024 * 512;
 	const prepareChunks = [];
 	for (let i = 0; i < Math.ceil(Number.parseInt(downloadInfo.contentLength) / chuckSize); i++) {
 		if (i % concurrentDownloads === 0) prepareChunks.push([]);
 		prepareChunks[prepareChunks.length - 1].push(`&range=${i * chuckSize}-${i * chuckSize + chuckSize - 1}`);
 	}
-	const downloadedChunks = prepareChunks.map(async (chunk) => await fetch(`${downloadUrl}${chunk}`).then(async (res) => await res.arrayBuffer()));
-	await Promise.all(downloadedChunks);
 	const chunks = [];
-	for (const i in downloadedChunks) {
-		chunks.push(await downloadedChunks[i]);
+	for (const downloadGroup of prepareChunks) {
+		const downloadedChunks = downloadGroup.map(async (chunk) => await fetch(`${downloadUrl}${chunk}`).then(async (res) => await res.arrayBuffer()));
+		await Promise.all(downloadedChunks);
+		for (const dc of downloadedChunks) {
+			chunks.push(await dc);
+		}
 	}
 
 	const m4aSong = await new Blob(chunks).arrayBuffer();
