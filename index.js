@@ -12,16 +12,8 @@ const createFetchBody = (musicId) => {
 		videoId: musicId,
 		context: {
 			client: {
-				clientName: "WEB",
-				clientVersion: "2.20210622.10.00",
-			},
-			thirdParty: {
-				embedUrl: `https://music.youtube.com/watch?v=${musicId}`,
-			},
-		},
-		playbackContext: {
-			contentPlaybackContext: {
-				signatureTimestamp: 19822, // from youtube music build d0ea0c5b
+				clientName: "IOS",
+				clientVersion: "19.09.3",
 			},
 		},
 	});
@@ -53,7 +45,7 @@ const ytMusicDl = async (id, options) => {
 
 	if (!(musicInfo.playabilityStatus && musicInfo.playabilityStatus.status === "OK")) throw new Error("music unplayable");
 	const downloadInfo = musicInfo?.streamingData?.adaptiveFormats?.find((f) => f.itag === targetItag);
-
+	console.log(downloadInfo);
 	if (options.showLogs) console.log("Download URL found!");
 
 	let musicProtected = false;
@@ -61,29 +53,32 @@ const ytMusicDl = async (id, options) => {
 		musicProtected = true;
 	}
 
+	const url = downloadInfo.url || downloadInfo.signatureCipher || downloadInfo.cipher;
+	const decipher = (url) => {
+		const args = parseQueryString(url);
+		if (!args.s || !decipherScript) return args.url;
+		const components = new URL(decodeURIComponent(args.url));
+		components.searchParams.set(args.sp ? args.sp : "signature", decipherScript(decodeURIComponent(args.s)));
+		return components.toString();
+	};
+	const ncode = (url) => {
+		const components = new URL(decodeURIComponent(url));
+		const n = components.searchParams.get("n");
+		if (!n || !nTransformScript) return url;
+		components.searchParams.set("n", decodeURIComponent(n));
+		return components.toString();
+	};
 	if (musicProtected) {
 		if (options.showLogs) console.log("Deciphering download URL...");
-		const decipher = (url) => {
-			const args = parseQueryString(url);
-			if (!args.s || !decipherScript) return args.url;
-			const components = new URL(decodeURIComponent(args.url));
-			components.searchParams.set(args.sp ? args.sp : "signature", decipherScript(decodeURIComponent(args.s)));
-			return components.toString();
-		};
-		const ncode = (url) => {
-			const components = new URL(decodeURIComponent(url));
-			const n = components.searchParams.get("n");
-			if (!n || !nTransformScript) return url;
-			components.searchParams.set("n", nTransformScript(decodeURIComponent(n)));
-			return components.toString();
-		};
-		const url = downloadInfo.url || downloadInfo.signatureCipher || downloadInfo.cipher;
 		downloadInfo.url = ncode(decipher(url));
+	} else {
+		downloadInfo.url = ncode(url);
 	}
 
 	const downloadUrl = downloadInfo.url;
 
 	if (options.showLogs) console.log("Downloading...");
+	console.log(downloadUrl);
 
 	const concurrentDownloads = 8;
 	const chuckSize = 1024 * 512;
@@ -94,7 +89,12 @@ const ytMusicDl = async (id, options) => {
 	}
 	const chunks = [];
 	for (const downloadGroup of prepareChunks) {
-		const downloadedChunks = downloadGroup.map(async (chunk) => await fetch(`${downloadUrl}${chunk}`).then(async (res) => await res.arrayBuffer()));
+		const downloadedChunks = downloadGroup.map(
+			async (chunk) =>
+				await fetch(`${downloadUrl}${chunk}`, {
+					method: "POST",
+				}).then(async (res) => await res.arrayBuffer())
+		);
 		await Promise.all(downloadedChunks);
 		for (const dc of downloadedChunks) {
 			chunks.push(await dc);
